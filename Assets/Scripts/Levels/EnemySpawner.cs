@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Linq;
 using System;
+using Unity.VisualScripting;
 
 public class EnemySpawner : MonoBehaviour
 {
@@ -19,16 +20,31 @@ public class EnemySpawner : MonoBehaviour
     private List<Enemy> EnemyDataList;
     private Dictionary<string, Enemy> EnemyDict = new Dictionary<string, Enemy>();
 
+    public TextAsset LevelDataFile;
+    private List<Level> LevelDataList;
+    private Dictionary<string, Level> LevelDict = new Dictionary<string, Level>();
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         // Deserialize enemy data
         EnemyDataList = JsonConvert.DeserializeObject<List<Enemy>>(EnemyDataFile.ToString());
-        // Create dictionary to access enemydata
+        // Create dictionary to access enemy data
         foreach (Enemy enemy in EnemyDataList)
         {
             EnemyDict.Add(enemy.name, enemy);
         }
+
+        // Deserialize level difficulty data
+        LevelDataList = JsonConvert.DeserializeObject<List<Level>>(LevelDataFile.ToString());
+        // Create dictionary to access level difficulty data
+        foreach (Level level in LevelDataList)
+        {
+            LevelDict.Add(level.name, level);
+        }
+        Debug.Log(LevelDict.Count);
+        Debug.Log(LevelDict["Easy"].spawns[0].sequence.Count);
+
 
         // Create level start button
         GameObject selector = Instantiate(button, level_selector.transform);
