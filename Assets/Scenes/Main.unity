@@ -1907,6 +1907,7 @@ MonoBehaviour:
   - {fileID: 1577913788}
   - {fileID: 587991943}
   EnemyDataFile: {fileID: 4900000, guid: 0113e2a27a7ef2f40b62cf96d0d02f54, type: 3}
+  LevelDataFile: {fileID: 4900000, guid: ae779f343461e17458d15b75687828fb, type: 3}
 --- !u!1 &532755679
 GameObject:
   m_ObjectHideFlags: 0
