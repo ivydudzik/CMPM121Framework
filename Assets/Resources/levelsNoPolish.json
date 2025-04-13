@@ -29,6 +29,7 @@
                 "enemy": "warlock",
                 "count": "1",
                 "hp": "500",
+                "damage": "20",
                 "location": "random bone"
             }
         ]

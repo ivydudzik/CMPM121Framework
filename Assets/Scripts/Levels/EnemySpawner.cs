@@ -51,6 +51,7 @@ public class EnemySpawner : MonoBehaviour
             LevelDict.Add(level.name, level);
         }
 
+        // DEBUG: Test that level data was deserialized correctly
         Debug.Log(LevelDict.Count);
         Debug.Log(LevelDict["Easy"].spawns[0].sequence.Count);
 
@@ -60,6 +61,9 @@ public class EnemySpawner : MonoBehaviour
         // Set level for spawns to match the selected level (should probably be moved later when the above is moved)
         levelName = GameManager.Instance.currentLevelName;
 
+        // Set wave count to 1
+        GameManager.Instance.currentWave = 1;
+
         // Create level start button
         GameObject selector = Instantiate(button, level_selector.transform);
         selector.transform.localPosition = new Vector3(0, 130);
@@ -67,12 +71,6 @@ public class EnemySpawner : MonoBehaviour
         selector.GetComponent<MenuSelectorController>().SetLevel("Start");
 
 
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
     }
 
     public void StartLevel(string levelname)
@@ -91,17 +89,18 @@ public class EnemySpawner : MonoBehaviour
 
     IEnumerator SpawnWave()
     {
-        // COUNTDOWN BEFORE WAVE
+        // COUNTDOWN BEFORE WAVE //
         GameManager.Instance.state = GameManager.GameState.COUNTDOWN;
         GameManager.Instance.countdown = 3; 
         // Wait 'countdown' seconds
-        for (int i = GameManager.Instance.countdown; i > 0; i--) // Why not use the countdown variable in gamemanager? 3 is hardcoded twice
+        for (int i = GameManager.Instance.countdown; i > 0; i--)
         {
             yield return new WaitForSeconds(1);
             // Update game manager countdown tracking variable every second
             GameManager.Instance.countdown--;
         }
-        // SPAWN ENEMIES DURING WAVE
+
+        // SPAWN ENEMIES DURING WAVE //
         GameManager.Instance.state = GameManager.GameState.INWAVE;
         foreach (Spawn enemySpawnData in LevelDict[levelName].spawns)
         {
@@ -115,8 +114,11 @@ public class EnemySpawner : MonoBehaviour
         }
         
         yield return new WaitWhile(() => GameManager.Instance.enemy_count > 0);
-        // END WAVE
+        // END WAVE //
         GameManager.Instance.state = GameManager.GameState.WAVEEND;
+        GameManager.Instance.currentWave++;
+        // Start next wave
+        NextWave();
     }
 
     IEnumerator SpawnEnemy(Spawn spawnData)
@@ -135,18 +137,22 @@ public class EnemySpawner : MonoBehaviour
         // Set sprite by indexing the spritemananager
         new_enemy.GetComponent<SpriteRenderer>().sprite = GameManager.Instance.enemySpriteManager.Get(EnemyDict[enemyName].sprite);
 
-        // Create controller script, set hp and speed on controller script
+        // Create controller script
         EnemyController en = new_enemy.GetComponent<EnemyController>();
-        // Set "base" variable contextually for evaluator function
-        int enemyHP = RPNEvaluator.Evaluate(spawnData.hp, new Dictionary<string, int>() { { "base", EnemyDict[enemyName].hp } });
+
+        // Set HP, Speed, and Damage on controller script (Set "base" & "wave" variable contextually for evaluator function)
+        int enemyHP = RPNEvaluator.Evaluate(spawnData.hp, new Dictionary<string, int>() { { "base", EnemyDict[enemyName].hp }, {"wave", GameManager.Instance.currentWave } });
         en.hp = new Hittable(enemyHP, Hittable.Team.MONSTERS, new_enemy);
-        int enemySpeed = RPNEvaluator.Evaluate(spawnData.speed, new Dictionary<string, int>() { { "base", EnemyDict[enemyName].speed } });
+        int enemySpeed = RPNEvaluator.Evaluate(spawnData.speed, new Dictionary<string, int>() { { "base", EnemyDict[enemyName].speed }, { "wave", GameManager.Instance.currentWave } });
         en.speed = enemySpeed;
+        int enemyDamage = RPNEvaluator.Evaluate(spawnData.damage, new Dictionary<string, int>() { { "base", EnemyDict[enemyName].damage }, { "wave", GameManager.Instance.currentWave } });
+        en.damage = enemyDamage;
 
         // Add enemy to gamemanager
         GameManager.Instance.AddEnemy(new_enemy);
 
-        // Wait (before spawning next zombie)
-        yield return new WaitForSeconds(0.5f);
+        // Wait (before spawning next enemy)
+        int spawnDelay = spawnData.delay;
+        yield return new WaitForSeconds(spawnDelay);
     }
 }
