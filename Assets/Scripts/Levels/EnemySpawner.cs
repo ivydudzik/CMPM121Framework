@@ -106,7 +106,6 @@ public class EnemySpawner : MonoBehaviour
         foreach (Spawn enemySpawnData in LevelDict[levelName].spawns)
         {
             // Access Enemy Spawn Data
-            // string enemyName = enemySpawnData.enemy;
             int enemySpawnCount = RPNEvaluator.Evaluate(enemySpawnData.count, new Dictionary<string, int>() { { "base", 1 } });
             // Spawn Enemies
             for (int i = enemySpawnCount; i < 10; ++i)
@@ -120,8 +119,11 @@ public class EnemySpawner : MonoBehaviour
         GameManager.Instance.state = GameManager.GameState.WAVEEND;
     }
 
-    IEnumerator SpawnEnemy(string name)
+    IEnumerator SpawnEnemy(Spawn spawnData)
     {
+        // Access Enemy Spawn Data
+        string enemyName = spawnData.enemy;
+
         // Pick a random spawn point and a random offset
         SpawnPoint spawn_point = SpawnPoints[UnityEngine.Random.Range(0, SpawnPoints.Length)];
         Vector2 offset = UnityEngine.Random.insideUnitCircle * 1.8f;
@@ -131,12 +133,15 @@ public class EnemySpawner : MonoBehaviour
         GameObject new_enemy = Instantiate(enemy, initial_position, Quaternion.identity);
 
         // Set sprite by indexing the spritemananager
-        new_enemy.GetComponent<SpriteRenderer>().sprite = GameManager.Instance.enemySpriteManager.Get(EnemyDict[name].sprite);
+        new_enemy.GetComponent<SpriteRenderer>().sprite = GameManager.Instance.enemySpriteManager.Get(EnemyDict[enemyName].sprite);
 
         // Create controller script, set hp and speed on controller script
         EnemyController en = new_enemy.GetComponent<EnemyController>();
-        en.hp = new Hittable(EnemyDict[name].hp, Hittable.Team.MONSTERS, new_enemy);
-        en.speed = EnemyDict[name].speed;
+        // Set "base" variable contextually for evaluator function
+        int enemyHP = RPNEvaluator.Evaluate(spawnData.hp, new Dictionary<string, int>() { { "base", EnemyDict[enemyName].hp } });
+        en.hp = new Hittable(enemyHP, Hittable.Team.MONSTERS, new_enemy);
+        int enemySpeed = RPNEvaluator.Evaluate(spawnData.speed, new Dictionary<string, int>() { { "base", EnemyDict[enemyName].speed } });
+        en.speed = enemySpeed;
 
         // Add enemy to gamemanager
         GameManager.Instance.AddEnemy(new_enemy);
