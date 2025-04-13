@@ -1,13 +1,8 @@
 using UnityEngine;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
-using System.IO;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using System.Collections;
-using System.Linq;
-using System;
-using Unity.VisualScripting;
 
 public class EnemySpawner : MonoBehaviour
 {
@@ -16,6 +11,9 @@ public class EnemySpawner : MonoBehaviour
     public GameObject enemy;
     public SpawnPoint[] SpawnPoints;
 
+    private string levelName;
+
+    // --- RESOURCE PARSING ---
     public TextAsset EnemyDataFile;
     private List<Enemy> EnemyDataList;
     private Dictionary<string, Enemy> EnemyDict = new Dictionary<string, Enemy>();
@@ -23,6 +21,16 @@ public class EnemySpawner : MonoBehaviour
     public TextAsset LevelDataFile;
     private List<Level> LevelDataList;
     private Dictionary<string, Level> LevelDict = new Dictionary<string, Level>();
+
+
+    // --- SPAWNING DEFAULTS ---
+    const int sequenceDefaultLength = 1;
+    const int sequenceDefaultValue = 1;
+    const int delayDefault = 2;
+    const string locationDefault = "random";
+    const string hpDefault = "base";
+    const string speedDefault = "base";
+    const string damageDefault = "base";
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -42,9 +50,15 @@ public class EnemySpawner : MonoBehaviour
         {
             LevelDict.Add(level.name, level);
         }
+
         Debug.Log(LevelDict.Count);
         Debug.Log(LevelDict["Easy"].spawns[0].sequence.Count);
 
+        // TEMP: HARD-CODED SET LEVEL TO "Easy"
+        GameManager.Instance.currentLevelName = "Easy";
+
+        // Set level for spawns to match the selected level (should probably be moved later when the above is moved)
+        levelName = GameManager.Instance.currentLevelName;
 
         // Create level start button
         GameObject selector = Instantiate(button, level_selector.transform);
@@ -81,7 +95,7 @@ public class EnemySpawner : MonoBehaviour
         GameManager.Instance.state = GameManager.GameState.COUNTDOWN;
         GameManager.Instance.countdown = 3; 
         // Wait 'countdown' seconds
-        for (int i = 3; i > 0; i--) // Why not use the countdown variable in gamemanager? 3 is hardcoded twice
+        for (int i = GameManager.Instance.countdown; i > 0; i--) // Why not use the countdown variable in gamemanager? 3 is hardcoded twice
         {
             yield return new WaitForSeconds(1);
             // Update game manager countdown tracking variable every second
@@ -89,10 +103,18 @@ public class EnemySpawner : MonoBehaviour
         }
         // SPAWN ENEMIES DURING WAVE
         GameManager.Instance.state = GameManager.GameState.INWAVE;
-        for (int i = 0; i < 10; ++i)
+        foreach (Spawn enemySpawnData in LevelDict[levelName].spawns)
         {
-            yield return SpawnEnemy("skeleton");
+            // Access Enemy Spawn Data
+            // string enemyName = enemySpawnData.enemy;
+            int enemySpawnCount = RPNEvaluator.Evaluate(enemySpawnData.count, new Dictionary<string, int>() { { "base", 1 } });
+            // Spawn Enemies
+            for (int i = enemySpawnCount; i < 10; ++i)
+            {
+                yield return SpawnEnemy(enemySpawnData);
+            }
         }
+        
         yield return new WaitWhile(() => GameManager.Instance.enemy_count > 0);
         // END WAVE
         GameManager.Instance.state = GameManager.GameState.WAVEEND;
