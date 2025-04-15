@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using System.Collections;
+using System.Linq;
 
 public class EnemySpawner : MonoBehaviour
 {
@@ -10,6 +11,9 @@ public class EnemySpawner : MonoBehaviour
     public GameObject button;
     public GameObject enemy;
     public SpawnPoint[] SpawnPoints;
+
+    // A dictionary derived from the given list of spawn points sorted by kind (color)
+    private Dictionary<SpawnPoint.SpawnName, List<SpawnPoint>> SpawnPointDict = new();
 
     private string levelName;
 
@@ -21,16 +25,6 @@ public class EnemySpawner : MonoBehaviour
     public TextAsset LevelDataFile;
     private List<Level> LevelDataList;
     private Dictionary<string, Level> LevelDict = new Dictionary<string, Level>();
-
-
-    // --- SPAWNING DEFAULTS ---
-    const int sequenceDefaultLength = 1;
-    const int sequenceDefaultValue = 1;
-    const int delayDefault = 2;
-    const string locationDefault = "random";
-    const string hpDefault = "base";
-    const string speedDefault = "base";
-    const string damageDefault = "base";
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -64,6 +58,9 @@ public class EnemySpawner : MonoBehaviour
         // Set wave count to 1
         GameManager.Instance.currentWave = 1;
 
+        // Sort spawn points by kind
+        CreateSpawnPointDictionaryByKind();
+
         // Create level start button
         GameObject selector = Instantiate(button, level_selector.transform);
         selector.transform.localPosition = new Vector3(0, 130);
@@ -71,6 +68,16 @@ public class EnemySpawner : MonoBehaviour
         selector.GetComponent<MenuSelectorController>().SetLevel("Start");
 
 
+    }
+
+    private void CreateSpawnPointDictionaryByKind()
+    {
+        foreach (SpawnPoint spawnpoint in SpawnPoints)
+        {
+            if (!SpawnPointDict.ContainsKey(spawnpoint.kind)) { SpawnPointDict[spawnpoint.kind] = new List<SpawnPoint>(); }
+
+            SpawnPointDict[spawnpoint.kind].Append(spawnpoint);
+        }
     }
 
     public void StartLevel(string levelname)
