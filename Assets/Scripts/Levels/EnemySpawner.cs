@@ -17,6 +17,8 @@ public class EnemySpawner : MonoBehaviour
 
     private string levelName;
 
+    Dictionary<Spawn, bool> SpawnsCompleted;
+
     // --- RESOURCE PARSING ---
     public TextAsset EnemyDataFile;
     private List<Enemy> EnemyDataList;
@@ -26,7 +28,6 @@ public class EnemySpawner : MonoBehaviour
     private List<Level> LevelDataList;
     private Dictionary<string, Level> LevelDict = new Dictionary<string, Level>();
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         // Deserialize enemy data
@@ -109,23 +110,39 @@ public class EnemySpawner : MonoBehaviour
 
         // SPAWN ENEMIES DURING WAVE //
         GameManager.Instance.state = GameManager.GameState.INWAVE;
+
+        // Get a new spawning coroutine for each enemy type
+        SpawnsCompleted = new();
         foreach (Spawn enemySpawnData in LevelDict[levelName].spawns)
         {
-            // Access Enemy Spawn Data
-            int enemySpawnCount = RPNEvaluator.Evaluate(enemySpawnData.count, new Dictionary<string, int>() { { "base", 1 } });
-            // Spawn Enemies
-            for (int i = enemySpawnCount; i < 10; ++i)
-            {
-                yield return SpawnEnemy(enemySpawnData);
-            }
+            StartCoroutine(SpawnWaveOfEnemy(enemySpawnData));
+            SpawnsCompleted[enemySpawnData] = false;
         }
-        
+
+        // Wait for no enemies to be spawning
+        foreach (Spawn enemySpawnData in LevelDict[levelName].spawns)
+        {
+            yield return new WaitWhile(() => SpawnsCompleted[enemySpawnData] == false);
+        }
+
+        // Wait for no enemies to be left alive
         yield return new WaitWhile(() => GameManager.Instance.enemy_count > 0);
         // END WAVE //
         GameManager.Instance.state = GameManager.GameState.WAVEEND;
         GameManager.Instance.currentWave++;
         // Start next wave
         NextWave();
+    }
+
+    IEnumerator SpawnWaveOfEnemy(Spawn SpawnData)
+    {
+        // Access Enemy Spawn Data
+        int enemySpawnCount = RPNEvaluator.Evaluate(SpawnData.count, new Dictionary<string, int>() { { "base", 1 } });
+        // Spawn Enemies
+        for (int i = enemySpawnCount; i < 10; ++i)
+        {
+            yield return SpawnEnemy(SpawnData);
+        }
     }
 
     IEnumerator SpawnEnemy(Spawn spawnData)
