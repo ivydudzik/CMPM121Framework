@@ -46,10 +46,6 @@ public class EnemySpawner : MonoBehaviour
             LevelDict.Add(level.name, level);
         }
 
-        // DEBUG: Test that level data was deserialized correctly
-        Debug.Log(LevelDict.Count);
-        Debug.Log(LevelDict["Easy"].spawns[0].sequence.Count);
-
         // TEMP: HARD-CODED SET LEVEL TO "Easy"
         GameManager.Instance.currentLevelName = "Easy";
 
@@ -138,14 +134,35 @@ public class EnemySpawner : MonoBehaviour
     {
         // Access Enemy Spawn Data
         int enemySpawnCount = RPNEvaluator.Evaluate(SpawnData.count, new Dictionary<string, int>() { { "base", 1 } });
+        List<int> enemySpawnSequence = SpawnData.sequence;
         // Spawn Enemies
-        for (int i = enemySpawnCount; i < 10; ++i)
+        int sequencePointer = 0;
+        for (int enemiesSpawnedInWave = 0; enemiesSpawnedInWave < enemySpawnCount; )
         {
-            yield return SpawnEnemy(SpawnData);
+            // Spawn a sub-wave of enemies
+            for (int enemiesSpawnedInSequence = 0; enemiesSpawnedInSequence < enemySpawnSequence[sequencePointer]; enemiesSpawnedInSequence++)
+            {
+                SpawnEnemy(SpawnData);
+                enemiesSpawnedInWave++;
+            }
+
+            // Loop through the sub-wave spawn counts sequence 
+            if (enemySpawnSequence.Count >= (sequencePointer + 1))
+            {
+                sequencePointer = 0;
+            } else
+            {
+                sequencePointer++;
+            }
+
+            // Wait the delay (before spawning next sub-wave of enemies)
+            int spawnDelay = SpawnData.delay;
+            yield return new WaitForSeconds(spawnDelay);
+
         }
     }
 
-    IEnumerator SpawnEnemy(Spawn spawnData)
+    void SpawnEnemy(Spawn spawnData)
     {
         // Access Enemy Spawn Data
         string enemyName = spawnData.enemy;
@@ -174,9 +191,5 @@ public class EnemySpawner : MonoBehaviour
 
         // Add enemy to gamemanager
         GameManager.Instance.AddEnemy(new_enemy);
-
-        // Wait (before spawning next enemy)
-        int spawnDelay = spawnData.delay;
-        yield return new WaitForSeconds(spawnDelay);
     }
 }
